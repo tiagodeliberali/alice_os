@@ -172,7 +172,7 @@ fn test_print_many_line() {
 #[test_case]
 fn test_println_output() {
     prepare_test("test println output... ");
-    
+
     let s = "long line but single one";
     println!("{}", s);
 
@@ -187,7 +187,7 @@ fn test_println_output() {
 #[test_case]
 fn test_print_output() {
     prepare_test("test print output... ");
-    
+
     let s = "long line but single one";
     print!("{}", s);
 
@@ -202,7 +202,7 @@ fn test_print_output() {
 #[test_case]
 fn test_print_invalid_char_output() {
     prepare_test("test print invalid char output... ");
-    
+
     let s = "áçãó";
     print!("{}", s);
 
@@ -223,19 +223,29 @@ fn test_print_invalid_char_output() {
 fn test_print_with_line_break_output() {
     prepare_test("test print with line break output... ");
     WRITER.lock().clear_screen();
-    
+
     let s1 = "first line";
     let s2 = "second line";
     print!("{}\n{}", s1, s2);
 
     for (i, c) in s1.bytes().enumerate() {
         let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
-        assert_eq!(char::from(char_screen.ascii_character), char::from(c), "failed on position {}", i);
+        assert_eq!(
+            char::from(char_screen.ascii_character),
+            char::from(c),
+            "failed on position {}",
+            i
+        );
     }
 
     for (i, c) in s2.bytes().enumerate() {
         let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 1][i].read();
-        assert_eq!(char::from(char_screen.ascii_character), char::from(c), "failed on position {}", i);
+        assert_eq!(
+            char::from(char_screen.ascii_character),
+            char::from(c),
+            "failed on position {}",
+            i
+        );
     }
 
     serial_println!("[ok]");
@@ -251,12 +261,22 @@ fn test_print_break_long_line_output() {
 
     for (i, c) in s[..80].bytes().enumerate() {
         let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
-        assert_eq!(char::from(char_screen.ascii_character), char::from(c), "failed on position {}", i);
+        assert_eq!(
+            char::from(char_screen.ascii_character),
+            char::from(c),
+            "failed on position {}",
+            i
+        );
     }
 
     for (i, c) in s[80..].bytes().enumerate() {
         let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 1][i].read();
-        assert_eq!(char::from(char_screen.ascii_character), char::from(c), "failed on position {}", i);
+        assert_eq!(
+            char::from(char_screen.ascii_character),
+            char::from(c),
+            "failed on position {}",
+            i
+        );
     }
 
     serial_println!("[ok]");
