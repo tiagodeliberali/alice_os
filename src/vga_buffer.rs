@@ -3,10 +3,13 @@ use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
 
+#[cfg(test)]
+use crate::{serial_print, serial_println};
+
 lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
+        color_code: ColorCode::new(Color::Cyan, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     });
 }
@@ -106,6 +109,14 @@ impl Writer {
         self.clear_line(BUFFER_HEIGHT - 1)
     }
 
+    #[cfg(test)]
+    fn clear_screen(&mut self) {
+        for row in 0..BUFFER_HEIGHT {
+            self.clear_line(row);
+        }
+        self.column_position = 0;
+    }
+
     fn clear_line(&mut self, row: usize) {
         let blank = ScreenChar {
             ascii_character: b' ',
@@ -140,4 +151,131 @@ macro_rules! println {
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
+}
+
+#[test_case]
+fn test_print_simple_line() {
+    prepare_test("test println... ");
+    println!("simple line print...");
+    serial_println!("[ok]");
+}
+
+#[test_case]
+fn test_print_many_line() {
+    prepare_test("test println many times... ");
+    for _ in 0..200 {
+        println!("single line print...");
+    }
+    serial_println!("[ok]");
+}
+
+#[test_case]
+fn test_println_output() {
+    prepare_test("test println output... ");
+    
+    let s = "long line but single one";
+    println!("{}", s);
+
+    for (i, c) in s.bytes().enumerate() {
+        let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
+        assert_eq!(char_screen.ascii_character, c);
+    }
+
+    serial_println!("[ok]");
+}
+
+#[test_case]
+fn test_print_output() {
+    prepare_test("test print output... ");
+    
+    let s = "long line but single one";
+    print!("{}", s);
+
+    for (i, c) in s.bytes().enumerate() {
+        let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 1][i].read();
+        assert_eq!(char_screen.ascii_character, c);
+    }
+
+    serial_println!("[ok]");
+}
+
+#[test_case]
+fn test_print_invalid_char_output() {
+    prepare_test("test print invalid char output... ");
+    
+    let s = "áçãó";
+    print!("{}", s);
+
+    for col in 0..8 {
+        let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 1][col].read();
+        assert_eq!(char_screen.ascii_character, 0xfe);
+    }
+
+    for col in 8..BUFFER_WIDTH {
+        let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 1][col].read();
+        assert_eq!(char::from(char_screen.ascii_character), char::from(' '));
+    }
+
+    serial_println!("[ok]");
+}
+
+#[test_case]
+fn test_print_with_line_break_output() {
+    prepare_test("test print with line break output... ");
+    WRITER.lock().clear_screen();
+    
+    let s1 = "first line";
+    let s2 = "second line";
+    print!("{}\n{}", s1, s2);
+
+    for (i, c) in s1.bytes().enumerate() {
+        let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
+        assert_eq!(char::from(char_screen.ascii_character), char::from(c), "failed on position {}", i);
+    }
+
+    for (i, c) in s2.bytes().enumerate() {
+        let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 1][i].read();
+        assert_eq!(char::from(char_screen.ascii_character), char::from(c), "failed on position {}", i);
+    }
+
+    serial_println!("[ok]");
+}
+
+#[test_case]
+fn test_print_break_long_line_output() {
+    prepare_test("test print break long line output... ");
+    WRITER.lock().clear_screen();
+
+    let s = "a really really really really really really really really really really really really really really long line";
+    print!("{}", s);
+
+    for (i, c) in s[..80].bytes().enumerate() {
+        let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
+        assert_eq!(char::from(char_screen.ascii_character), char::from(c), "failed on position {}", i);
+    }
+
+    for (i, c) in s[80..].bytes().enumerate() {
+        let char_screen = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 1][i].read();
+        assert_eq!(char::from(char_screen.ascii_character), char::from(c), "failed on position {}", i);
+    }
+
+    serial_println!("[ok]");
+}
+
+#[cfg(test)]
+#[allow(dead_code)]
+fn print_screen_serial() {
+    for row in 0..BUFFER_HEIGHT {
+        for col in 0..BUFFER_WIDTH {
+            let value = WRITER.lock().buffer.chars[row][col].read();
+            serial_print!("{}", char::from(value.ascii_character));
+        }
+        serial_println!();
+    }
+}
+
+#[cfg(test)]
+fn prepare_test(name: &str) {
+    WRITER.lock().clear_screen();
+    serial_print!("{}", name);
 }
