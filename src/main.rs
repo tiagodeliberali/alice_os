@@ -7,7 +7,7 @@ static CONTENT: &[u8] = b"HELLO ALICE";
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    let vga_buffer = 0x8000 as *mut u8;
+    let vga_buffer = 0xb8000 as *mut u8;
 
     for (i, &byte) in CONTENT.iter().enumerate() {
         unsafe {
