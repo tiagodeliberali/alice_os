@@ -125,10 +125,19 @@ impl fmt::Write for Writer {
     }
 }
 
-pub fn print_welcome() {
-    use core::fmt::Write;
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
+}
 
-    writeln!(WRITER.lock(), "Alice OS").unwrap();
-    writeln!(WRITER.lock(), "--------").unwrap();
-    write!(WRITER.lock(), "version: {}", 0.1).unwrap();
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
 }
