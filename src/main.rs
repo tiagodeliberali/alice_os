@@ -33,7 +33,6 @@ fn panic(info: &PanicInfo) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     alice_os::test_panic_handler(info);
-    loop {}
 }
 
 #[test_case]
